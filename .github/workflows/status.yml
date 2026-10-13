@@ -28,7 +28,8 @@ jobs:
           script: |
             D=docker; docker info >/dev/null 2>&1 || D="sudo -n docker"
             echo "== 컨테이너"; $D ps -a --filter name=blogville --format '{{.Names}} {{.Status}} {{.Image}}'
+            A=$(cat ~/blogville/active 2>/dev/null || true); echo "== 지금 쓰는 쪽: ${A:-없음(예전 방식)}"
             echo "== 8400 포트"; (ss -ltnp 2>/dev/null || netstat -ltn 2>/dev/null) | grep -E ':8400\b' || echo "8400을 듣는 곳이 없어요"
             echo "== 서버 안에서 열기"; for u in http://127.0.0.1:8400/ http://$(hostname -I | awk '{print $1}'):8400/; do echo "$u -> $(curl -s -o /dev/null -m 10 -w '%{http_code}' $u || echo 실패)"; done
             echo "== 서버 IP"; hostname -I
-            echo "== 최근 로그"; $D logs --tail 30 blogville 2>&1 | grep -vE "collation|severity|01000|detail:|hint:|file:|line:|routine:|^\{|^\}" | tail -30
+            echo "== 최근 로그"; $D logs --tail 30 blogville${A:+-$A} 2>&1 | grep -vE "collation|severity|01000|detail:|hint:|file:|line:|routine:|^\{|^\}" | tail -30

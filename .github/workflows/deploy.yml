@@ -1,4 +1,4 @@
-# main에 올라오면 도커 이미지를 만들어 서버에 올리고 deploy/run.sh로 실행한다 (포트 8400).
+# main에 올라오면 도커 이미지를 만들어 서버에 올리고 deploy/run.sh로 무중단 배포한다 (포트 8400, nginx 뒤 블루·그린).
 # 쓰는 시크릿: SSH_ADDRESS, SSH_PORT, SSH_ID, SSH_PASSWORD,
 #             DB_ADDRESS, DB_PORT, DB_NAME, DB_SCHEMA, DB_USERNAME, DB_PASSWORD
 #             APP_URL (선택, 없으면 http://SSH_ADDRESS:8400)
@@ -26,6 +26,9 @@ jobs:
           docker build -t "$IMAGE" .
           mkdir -p out
           docker save "$IMAGE" | gzip > out/blogville-image.tar.gz
+          # 서버가 Docker Hub에 못 닿아도 되게 nginx 이미지도 함께 올린다 (서버에 이미 있으면 run.sh가 건너뜀)
+          docker pull nginx:1.27-alpine
+          docker save nginx:1.27-alpine | gzip > out/proxy-image.tar.gz
           cp deploy/run.sh out/run.sh
           ls -lh out
 
@@ -96,7 +99,7 @@ jobs:
           port: ${{ env.SSH_PORT }}
           username: ${{ secrets.SSH_ID }}
           password: ${{ secrets.SSH_PASSWORD }}
-          source: out/blogville-image.tar.gz,out/run.sh
+          source: out/blogville-image.tar.gz,out/proxy-image.tar.gz,out/run.sh
           target: blogville
           strip_components: 1
 
