@@ -41,8 +41,9 @@ const migrations = journal.entries.map((entry) => {
 const sql = postgres(url, { max: 1, onnotice: () => {} });
 let current = "";
 try {
-  // 쓸 수 있는 스키마에만 만든다. 이미 있으면 CREATE 권한 없이도 지나간다
+  // 지정한 스키마는 새로 만들지 않는다 (발급받은 것을 그대로 쓴다). public일 때만 drizzle 기록 스키마를 만든다
   const [{ exists }] = await sql`select exists(select 1 from pg_namespace where nspname = ${recordSchema}) as exists`;
+  if (!exists && target) throw new Error(`스키마 ${target}가 DB에 없어요. DB_SCHEMA 값을 확인해 주세요.`);
   if (!exists) await sql.unsafe(`CREATE SCHEMA "${recordSchema}"`);
   await sql.unsafe(`CREATE TABLE IF NOT EXISTS ${table} (id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint)`);
   const [last] = await sql.unsafe(`select created_at from ${table} order by created_at desc limit 1`);
