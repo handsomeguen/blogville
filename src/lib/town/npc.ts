@@ -1,11 +1,13 @@
 // 걸어 다니는 이웃 (TOWN-19, specs/050-town-npc): 마을에 집이 선 이웃이 흙길을 따라 걷는다. 게임 화면과 단위 시험이 같이 쓴다.
 import { walkDir, type WalkDir } from "@/lib/art/walk";
-import { feetRect, lotFront, overlaps, ROAD, ROADS, WORLD, type Point, type Rect } from "./layout";
+import { feetRect, inGarden, lotFront, overlaps, ROAD, ROADS, WORLD, type Point, type Rect } from "./layout";
 
 /** 이웃이 걷는 빠르기 (px/초). 내 캐릭터(230)보다 느긋하게 */
 export const NPC_SPEED = 70;
 /** 내 집(0번) 앞 이만큼 안에는 오지 않는다 */
 export const HOME_CLEARANCE = 190;
+/** 내 정원(TOWN-20) 둘레 이만큼 안에도 오지 않는다. 정원 길(`GARDEN_APPROACH`·`GARDEN_PATHS`)은 처음부터 길 그물에 없다 */
+export const GARDEN_CLEARANCE = 60;
 /** 갈림길에서 쉬는 시간 (초) */
 export const NPC_PAUSE = { min: 0.6, max: 1.8 } as const;
 /** 이 거리 안에 들어오면 이름표가 보인다 */
@@ -39,6 +41,13 @@ export function segmentClear(a: Point, b: Point, bodies: readonly Rect[]): boole
   return true;
 }
 
+/** 두 점 사이가 내 정원 둘레 `GARDEN_CLEARANCE` 안을 지나는가 (6px마다 본다) */
+function nearGarden(a: Point, b: Point): boolean {
+  const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 6));
+  for (let i = 0; i <= n; i++) if (inGarden({ x: a.x + ((b.x - a.x) * i) / n, y: a.y + ((b.y - a.y) * i) / n }, GARDEN_CLEARANCE)) return true;
+  return false;
+}
+
 /** 선분 위에서 `home`에 가장 가까운 거리 */
 function distanceToSegment(home: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
@@ -50,7 +59,8 @@ function distanceToSegment(home: Point, a: Point, b: Point): number {
 
 /**
  * 걷는 길 만들기: 흙길마다 끝·다른 길과 만나는 점·집 앞(`stops`)에서 끊어 이웃한 점끼리 잇는다.
- * 건물·나무·절벽에 막히는 줄과 내 집(`home`) 앞 `HOME_CLEARANCE` 안을 지나는 줄은 뺀다. 줄이 없는 점은 버린다.
+ * 건물·나무·절벽에 막히는 줄, 내 집(`home`) 앞 `HOME_CLEARANCE` 안을 지나는 줄, 내 정원 둘레를 지나는 줄은 뺀다. 줄이 없는 점은 버린다.
+ * 길은 공개 흙길(`ROADS`)만 쓰고 정원 길은 쓰지 않는다 (TOWN-20).
  */
 export function npcGraph(bodies: readonly Rect[], home: Point | null, stops: readonly Point[] = []): NpcGraph {
   const segments = ROADS.map(centerline).filter(([a, b]) => a.x !== b.x || a.y !== b.y);
@@ -80,6 +90,7 @@ export function npcGraph(bodies: readonly Rect[], home: Point | null, stops: rea
     for (let i = 1; i < sorted.length; i++) {
       const [p, q] = [sorted[i - 1], sorted[i]];
       if (home && distanceToSegment(home, p, q) < HOME_CLEARANCE) continue;
+      if (nearGarden(p, q)) continue;
       if (!segmentClear(p, q, bodies)) continue;
       const [x, y] = [nodeOf(p), nodeOf(q)];
       pairs.add(x < y ? `${x}:${y}` : `${y}:${x}`);

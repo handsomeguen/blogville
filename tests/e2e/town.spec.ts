@@ -7,6 +7,11 @@ test.describe.configure({ timeout: 90_000 });
 const canvas = (page: Page) => page.locator("[data-town] canvas");
 const prompt = (page: Page) => page.locator("[data-town-prompt]");
 const feet = async (page: Page) => (await canvas(page).getAttribute("data-feet"))!.split(",").map(Number) as [number, number];
+/** 발이 내 정원 타원 안인가 (`data-garden`, TOWN-20) */
+const inGarden = async (page: Page, [x, y]: number[]) => {
+  const [cx, cy, rx, ry] = (await canvas(page).getAttribute("data-garden"))!.split(",").map(Number);
+  return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+};
 const teleport = (page: Page, x: number, y: number) =>
   canvas(page).evaluate((c, d) => c.dispatchEvent(new CustomEvent("bv-teleport", { detail: d })), { x, y });
 async function openTown(page: Page, url = "/town") {
@@ -86,10 +91,10 @@ test.describe("TOWN 마을", () => {
     await page.keyboard.up("ArrowUp");
   });
 
-  test("높낮이: 절벽 앞면은 막히고 계단 4곳으로만 오르내린다 (TOWN-05)", async ({ page }) => {
+  test("높낮이: 절벽 앞면·정원 축대는 막히고 계단 4곳 + 정원 계단으로만 오르내린다 (TOWN-05·20)", async ({ page }) => {
     await openTown(page);
     const stairs = (await canvas(page).getAttribute("data-stairs"))!.split(" ").map((s) => s.split(",").map(Number));
-    expect(stairs).toHaveLength(4);
+    expect(stairs).toHaveLength(5);
     const hold = async (key: string, ms: number) => {
       await page.keyboard.down(key);
       await page.waitForTimeout(ms);
@@ -109,8 +114,40 @@ test.describe("TOWN 마을", () => {
       await expect.poll(async () => (await feet(page))[0]).toBe(tx + 200);
       await hold("ArrowUp", 600);
       await page.waitForTimeout(100);
-      expect((await feet(page))[1]).toBeGreaterThan(ty + 40);
+      // 정원 축대는 둥글어서 옆쪽 앞면이 계단 꼭대기보다 조금 위에서 끝난다
+      expect((await feet(page))[1]).toBeGreaterThan(ty + 20);
     }
+    // 정원 계단을 오르면 아치 문을 지나 정원 안
+    const [gx, gy] = stairs[4];
+    await teleport(page, gx, gy);
+    await hold("ArrowUp", 400);
+    expect(await inGarden(page, await feet(page))).toBe(true);
+  });
+
+  test("내 정원: 옆·뒤 돌 테로는 못 들어가고, 정원 안에서 집 앞·농장 앞으로 간다 (TOWN-20)", async ({ page }) => {
+    await openTown(page);
+    const [cx, cy, rx, ry] = (await canvas(page).getAttribute("data-garden"))!.split(",").map(Number);
+    const hold = async (key: string, ms: number) => {
+      await page.keyboard.down(key);
+      await page.waitForTimeout(ms);
+      await page.keyboard.up(key);
+    };
+    // 서쪽 옆에서 동쪽으로 밀면 돌 테에 막힌다
+    await teleport(page, cx - rx - 60, cy + 10);
+    await expect.poll(async () => (await feet(page))[0]).toBe(cx - rx - 60);
+    await hold("ArrowRight", 700);
+    expect(await inGarden(page, await feet(page))).toBe(false);
+    // 뒤(북쪽)에서 남쪽으로 밀어도 막힌다
+    await teleport(page, cx + 120, cy - ry - 40);
+    await expect.poll(async () => (await feet(page))[1]).toBe(cy - ry - 40);
+    await hold("ArrowDown", 700);
+    expect(await inGarden(page, await feet(page))).toBe(false);
+    // 아치 문 안쪽에서 위로 가면 집 앞·농장 앞 길
+    await teleport(page, cx, cy + ry - 10);
+    await hold("ArrowUp", 600);
+    expect(await inGarden(page, await feet(page))).toBe(true);
+    await teleport(page, 2150, 770);
+    await expect(prompt(page)).toHaveText("🐮 동물 농장 · Space 로그인하고 이용하기");
   });
 
   test("회원: 블로그 🚪 밖으로 → 내 집 앞, Enter로 다시 블로그. 즐겨찾는 이웃의 집이 1번 자리에 서고 들어가면 그 블로그", async ({ page, browser }) => {
@@ -126,7 +163,9 @@ test.describe("TOWN 마을", () => {
     await expect(door).toHaveAttribute("href", `/town?at=${username}`);
     await door.click();
     await expect(canvas(page)).toHaveAttribute("data-ready", "1");
-    expect(await feet(page)).toEqual([1000, 1290]);
+    // 내 집은 동쪽 내 정원 안 (TOWN-20)
+    expect(await feet(page)).toEqual([1870, 770]);
+    expect(await inGarden(page, await feet(page))).toBe(true);
     await expect(prompt(page)).toHaveText("🏠 내 집 · Space 들어가기");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(`/@${username}`);

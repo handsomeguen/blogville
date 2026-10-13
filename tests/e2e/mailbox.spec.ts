@@ -80,7 +80,7 @@ test.describe("TOWN-13 집 앞 우체통", () => {
     await other.close();
     await openTown(page);
     expect(await canvas(page).getAttribute("data-mail-flag")).toBe("0");
-    await teleport(page, 1118, 1290);
+    await teleport(page, 1988, 770);
     await expect(prompt(page)).toHaveText("📬 내 우체통 · Space 소식 보기");
     await page.keyboard.press("Space");
     await expect(panel(page).getByRole("heading")).toHaveText("📮 내 우체통");
@@ -93,7 +93,7 @@ test.describe("TOWN-13 집 앞 우체통", () => {
     await sql`insert into notifications (user_id, kind, actor_id, post_id) values (${await userId(me)}, 'like', ${await userId(actor)}, ${post.id})`;
     await openTown(page);
     expect(await canvas(page).getAttribute("data-mail-flag")).toBe("1");
-    await teleport(page, 1118, 1290);
+    await teleport(page, 1988, 770);
     await page.keyboard.press("Space");
     await expect(panel(page).locator('[data-notification="unread"]')).toHaveCount(1);
     await expect(panel(page).getByRole("link", { name: "알림함 전체 보기 ›" })).toBeVisible();

@@ -6,7 +6,7 @@ import { findArt } from "@/lib/art";
 import { pixelRects, type PixelArt } from "@/lib/art/characters";
 import { walkDir, walkFrame, WALK_DIRS, WALK_FPS, WALK_FRAMES, type ColorGrid, type WalkDir } from "@/lib/art/walk";
 import { TOWN_CELL } from "@/lib/art/town";
-import { HOUSE_LOTS, lotFront, PLAYER_SIZE, shortName, SPEED, WORLD, nearestEntrance, normalize, step, type Point } from "@/lib/town/layout";
+import { GARDEN, HOUSE_LOTS, lotFront, PLAYER_SIZE, shortName, SPEED, WORLD, nearestEntrance, normalize, step, type Point } from "@/lib/town/layout";
 import { createNpcs, NPC_TAG_DISTANCE, npcGraph, updateNpcs, type Npc } from "@/lib/town/npc";
 import { artSize, artVisibleHeight, entrancePrompt, lotChoice, mailboxLot, townLayout, type TownEntrance, type TownHouseInput } from "@/lib/town/structures";
 import { onStairs, STAIR_SLOW, stairEnds, STAIRS } from "@/lib/town/terrain";
@@ -103,6 +103,7 @@ function drawTag(ctx: CanvasRenderingContext2D, text: string, x: number, y: numb
  * 우체통 입구는 페이지를 옮기지 않고 창 밖(window)에 `bv-mailbox` 이벤트(`{lot}`)를 보낸다 (TOWN-13, `TownHud`가 연다).
  * 내 마을(`chooseLots`)의 빈 집터는 `bv-lots` 이벤트(`{lot}`)로 자리 고르기 창을 연다 (TOWN-18).
  * 집이 선 이웃은 흙길을 걸어 다니고(TOWN-19), 누르면 그 집 우체통이 열린다. 시험 훅 `data-npcs`·`data-npc-walking`·`data-npc-at`.
+ * 내 집(0번)과 농장은 동쪽 내 정원 안에 있고(TOWN-20), 정원 타원은 시험 훅 `data-garden`.
  */
 export function TownGame({
   houses,
@@ -173,7 +174,7 @@ export function TownGame({
     };
     const walkSheet = bakeSheet(layers);
 
-    // 걸어 다니는 이웃 (TOWN-19): 집이 선 이웃(1~10번)이 흙길을 걷는다. 내 집(0번) 앞에는 오지 않는다
+    // 걸어 다니는 이웃 (TOWN-19): 집이 선 이웃(1~10번)이 흙길을 걷는다. 내 집(0번) 앞과 내 정원(TOWN-20)에는 오지 않는다
     const graph = npcGraph(bodies, lotFront(0), HOUSE_LOTS.map((_, i) => lotFront(i)));
     const npcs = createNpcs(
       graph,
@@ -469,7 +470,9 @@ export function TownGame({
         // 시험 훅: 집 자리마다 지붕 색 (TOWN-07)
         data-roofs={houses.map((h) => `${h.lot}:${h.roof}`).join(" ")}
         data-mail-flag={mailFlag ? "1" : "0"}
-        // 시험 훅: 계단마다 `위x,위y,아래x,아래y` (TOWN-05)
+        // 시험 훅: 내 정원 타원 `가운데x,가운데y,가로 반지름,세로 반지름` (TOWN-20)
+        data-garden={`${GARDEN.cx},${GARDEN.cy},${GARDEN.rx},${GARDEN.ry}`}
+        // 시험 훅: 계단마다 `위x,위y,아래x,아래y` (TOWN-05, 마지막은 정원 계단)
         data-stairs={STAIRS.map((st) => {
           const { top, bottom } = stairEnds(st);
           return `${top.x},${top.y},${bottom.x},${bottom.y}`;

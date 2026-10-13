@@ -29,7 +29,7 @@ test.describe("TOWN-15 친구 마을 구경", () => {
     await expect(page).toHaveTitle(`${host}님의 마을 | Blogville`);
     await expect(page.locator(`[data-town-host="${host}"]`)).toContainText(`🏘 ${host}님의 마을`);
     await expect(canvas(page)).toHaveAttribute("data-ready", "1");
-    expect(await feet(page)).toEqual([1000, 1290]);
+    expect(await feet(page)).toEqual([1870, 770]);
     await expect(page.locator("[data-town-prompt]")).toHaveText(`🏠 ${short(host)}의 집 · Space 들어가기`);
     await expect(canvas(page)).toHaveAttribute("aria-label", `${host}님의 마을 지도. 방향키로 걷고 Space로 들어가요`);
 

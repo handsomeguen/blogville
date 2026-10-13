@@ -86,7 +86,7 @@ test.describe("TOWN-09 동물 농장", () => {
     await page.goto("/town");
     const canvas = page.locator("[data-town] canvas");
     await expect(canvas).toHaveAttribute("data-ready", "1");
-    await canvas.evaluate((c) => c.dispatchEvent(new CustomEvent("bv-teleport", { detail: { x: 1260, y: 1110 } })));
+    await canvas.evaluate((c) => c.dispatchEvent(new CustomEvent("bv-teleport", { detail: { x: 2150, y: 770 } })));
     await expect(page.locator("[data-town-prompt]")).toHaveText("🐮 동물 농장 · Space 들어가기");
     await page.keyboard.press("Space");
     await expect(page).toHaveURL(/\/farm$/);
@@ -96,7 +96,7 @@ test.describe("TOWN-09 동물 농장", () => {
     await guest.goto("/town");
     const gc = guest.locator("[data-town] canvas");
     await expect(gc).toHaveAttribute("data-ready", "1");
-    await gc.evaluate((c) => c.dispatchEvent(new CustomEvent("bv-teleport", { detail: { x: 1260, y: 1110 } })));
+    await gc.evaluate((c) => c.dispatchEvent(new CustomEvent("bv-teleport", { detail: { x: 2150, y: 770 } })));
     await expect(guest.locator("[data-town-prompt]")).toHaveText("🐮 동물 농장 · Space 로그인하고 이용하기");
     await guest.close();
   });

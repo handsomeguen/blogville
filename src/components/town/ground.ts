@@ -1,6 +1,6 @@
-// 마을 바닥 (TOWN-02·05): 잔디·흙길·돌광장·절벽 앞면·계단·먼 하늘을 도트(칸 4px)로 한 번만 굽는다. 브라우저에서만 부른다.
-import { CENTER, PLAZA_RADIUS, ROADS, WORLD } from "@/lib/town/layout";
-import { CLIFF_FACE, CLIFF_LINES, RAIL, SKY_HEIGHT, STAIRS } from "@/lib/town/terrain";
+// 마을 바닥 (TOWN-02·05·20): 잔디·흙길·돌광장·내 정원·절벽 앞면·계단·먼 하늘을 도트(칸 4px)로 한 번만 굽는다. 브라우저에서만 부른다.
+import { CENTER, GARDEN, GARDEN_APPROACH, GARDEN_BEDS, gardenEdge, GARDEN_PATHS, inGarden, PLAZA_RADIUS, ROADS, WORLD } from "@/lib/town/layout";
+import { CLIFF_FACE, CLIFF_LINES, GARDEN_RIM, RAIL, SKY_HEIGHT, STAIRS } from "@/lib/town/terrain";
 
 export const GROUND_CELL = 4;
 
@@ -35,14 +35,15 @@ export function bakeGround(): HTMLCanvasElement {
     ctx.fillStyle = flowers[i % flowers.length];
     ctx.fillRect(Math.floor(random() * w), Math.floor(random() * h), 1, 1);
   }
-  // 흙길: 테두리 한 칸 진하게
+  // 흙길: 테두리 한 칸 진하게 (정원 가는 길도 같은 흙길)
+  const dirt = [...ROADS, ...GARDEN_APPROACH];
   ctx.fillStyle = "#b8925f";
-  for (const r of ROADS) ctx.fillRect(c(r.x) - 1, c(r.y) - 1, c(r.width) + 2, c(r.height) + 2);
+  for (const r of dirt) ctx.fillRect(c(r.x) - 1, c(r.y) - 1, c(r.width) + 2, c(r.height) + 2);
   ctx.fillStyle = "#d9b98a";
-  for (const r of ROADS) ctx.fillRect(c(r.x), c(r.y), c(r.width), c(r.height));
+  for (const r of dirt) ctx.fillRect(c(r.x), c(r.y), c(r.width), c(r.height));
   ctx.fillStyle = "#cfae7d";
   for (let i = 0; i < 1400; i++) {
-    const r = ROADS[i % ROADS.length];
+    const r = dirt[i % dirt.length];
     ctx.fillRect(c(r.x) + Math.floor(random() * c(r.width)), c(r.y) + Math.floor(random() * c(r.height)), 1, 1);
   }
   // 돌광장: 원 안을 돌 타일로
@@ -59,6 +60,7 @@ export function bakeGround(): HTMLCanvasElement {
       ctx.fillRect(cx + x, cy + y, 1, 1);
     }
   }
+  drawGarden(ctx, c, random);
   drawCliffs(ctx, w, c);
   drawSky(ctx, w, c(SKY_HEIGHT));
   // 대기 원근: 북쪽(먼 곳)일수록 하늘빛을 섞는다
@@ -68,6 +70,93 @@ export function bakeGround(): HTMLCanvasElement {
   ctx.fillStyle = air;
   ctx.fillRect(0, 0, w, c(900));
   return canvas;
+}
+
+/**
+ * 내 정원 (TOWN-20): 깎은 줄무늬 잔디, 뒤 덤불 줄, 돌길, 꽃밭, 뒤·옆 낮은 돌 테, 앞 다듬은 돌 축대(큰 돌을 엇갈려 쌓음).
+ * 계단은 `drawCliffs`가 그 위에 그린다.
+ */
+function drawGarden(ctx: CanvasRenderingContext2D, c: (v: number) => number, random: () => number) {
+  const C = GROUND_CELL;
+  const x0 = c(GARDEN.cx - GARDEN.rx) - 2;
+  const x1 = c(GARDEN.cx + GARDEN.rx) + 2;
+  // 잔디: 세로 줄무늬 (6칸마다 밝게·어둡게)
+  for (let y = c(GARDEN.cy - GARDEN.ry) - 2; y <= c(GARDEN.cy + GARDEN.ry) + 2; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (!inGarden({ x: x * C + C / 2, y: y * C + C / 2 })) continue;
+      const stripe = Math.floor((x - x0) / 6) % 2 === 0;
+      ctx.fillStyle = stripe ? "#93d77e" : "#84ca70";
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  // 뒤 덤불 줄: 돌 테 바로 안쪽에 둥근 덤불
+  for (let x = GARDEN.cx - GARDEN.rx * 0.82; x <= GARDEN.cx + GARDEN.rx * 0.82; x += 22) {
+    const top = c(gardenEdge(x)!.top + GARDEN_RIM + 10);
+    const bx = c(x);
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -4; dx <= 4; dx++) {
+        if ((dx * dx) / 20 + (dy * dy) / 10 > 1) continue;
+        ctx.fillStyle = dy > 1 ? "#2f6e2c" : (dx + dy) % 3 === 0 ? "#4f9a45" : "#3d8237";
+        ctx.fillRect(bx + dx, top + dy, 1, 1);
+      }
+    }
+  }
+  // 돌길 (넓적한 판돌, 줄눈)
+  for (const r of GARDEN_PATHS) {
+    for (let y = c(r.y); y < c(r.y + r.height); y++) {
+      for (let x = c(r.x); x < c(r.x + r.width); x++) {
+        ctx.fillStyle = (x % 5 === 0 || y % 4 === 0) && (x + y) % 2 === 0 ? "#c9bea6" : (x * 3 + y * 7) % 13 === 0 ? "#ddd3bd" : "#e8e0cc";
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+  }
+  // 꽃밭: 흙 테두리 안에 빨강·분홍·노랑·흰 꽃과 잎
+  const petals = ["#e0414f", "#ff9fb8", "#ffd166", "#ffffff", "#b39ddb"];
+  for (const bed of GARDEN_BEDS) {
+    const [bx, by, bw, bh] = [c(bed.x), c(bed.y), c(bed.width), c(bed.height)];
+    ctx.fillStyle = "#7a5230";
+    ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+    ctx.fillStyle = "#94643a";
+    ctx.fillRect(bx, by, bw, bh);
+    for (let y = by; y < by + bh; y++) {
+      for (let x = bx; x < bx + bw; x++) {
+        if ((x + y * 2) % 3 === 0) {
+          ctx.fillStyle = "#4f9a45";
+          ctx.fillRect(x, y, 1, 1);
+        } else if (random() < 0.3) {
+          ctx.fillStyle = petals[Math.floor(random() * petals.length)];
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+  }
+  // 둘레: 뒤·옆은 낮은 돌 테 (가장자리 띠), 앞은 축대 윗돌
+  for (let y = c(GARDEN.cy - GARDEN.ry) - 3; y <= c(GARDEN.cy + GARDEN.ry) + 3; y++) {
+    for (let x = x0 - 2; x <= x1 + 2; x++) {
+      const p = { x: x * C + C / 2, y: y * C + C / 2 };
+      if (!inGarden(p, GARDEN_RIM) || inGarden(p, -GARDEN_RIM)) continue;
+      if (p.y < GARDEN.cy) ctx.fillStyle = inGarden(p) ? ((x + y) % 4 === 0 ? "#8e8370" : "#a39883") : "#b7ad98";
+      else ctx.fillStyle = "#ddd3bd";
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  // 앞 다듬은 돌 축대: 아래 가장자리에서 `CLIFF_FACE`만큼, 큰 돌을 엇갈려 쌓는다
+  const face = c(CLIFF_FACE);
+  for (let x = x0; x <= x1; x++) {
+    const edge = gardenEdge(x * C + C / 2);
+    if (!edge) continue;
+    const bottom = c(edge.bottom) + 1;
+    for (let y = 0; y < face; y++) {
+      const course = Math.floor(y / 4);
+      const joint = y % 4 === 3 || (x + (course % 2) * 4) % 8 === 0;
+      ctx.fillStyle = joint ? "#8e8370" : y === 0 ? "#d6ccb5" : (x * 5 + course * 11) % 9 === 0 ? "#bdb29b" : "#c8bea8";
+      ctx.fillRect(x, bottom + y, 1, 1);
+    }
+    ctx.fillStyle = "#6e6455";
+    ctx.fillRect(x, bottom + face - 1, 1, 1);
+    ctx.fillStyle = "rgba(40, 60, 30, 0.25)";
+    ctx.fillRect(x, bottom + face, 1, 2);
+  }
 }
 
 /** 절벽 앞면(돌벽)과 계단 (TOWN-05). 앞면은 높은 단 가장자리에서 아래로 `CLIFF_FACE` */

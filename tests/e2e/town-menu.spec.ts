@@ -33,7 +33,7 @@ test.describe("TOWN-12 ☰ 마을 메뉴", () => {
     await expect(panel(page).getByRole("button", { name: "로그아웃" })).toBeVisible();
     await expect(panel(page).getByRole("link", { name: "👑 관리자" })).toHaveCount(0);
     // 헤더가 없어 바로 가기 링크
-    await expect(panel(page).getByRole("navigation", { name: "바로 가기" }).getByRole("link")).toHaveText(["✏️ 글쓰기", "📋 마을 소식", "🏪 상점", "📮 출석", "🐮 동물 농장", "🎣 낚시터"]);
+    await expect(panel(page).getByRole("navigation", { name: "바로 가기" }).getByRole("link")).toHaveText(["✏️ 글쓰기", "📋 마을 소식", "🏪 상점", "👗 옷가게", "💇 미용실", "📮 출석", "🐮 동물 농장", "🎣 낚시터"]);
 
     await panel(page).getByRole("button", { name: /👤 내 프로필/ }).click();
     await expect(panel(page).getByRole("heading")).toHaveText("👤 내 프로필");
@@ -76,7 +76,12 @@ test.describe("TOWN-12 ☰ 마을 메뉴", () => {
     await menuButton(page).click();
     await panel(page).getByRole("button", { name: /✨ 텔레포트/ }).click();
     await lots.first().click();
-    await expect.poll(() => feet(page)).toEqual([1000, 1290]);
+    await expect.poll(() => feet(page)).toEqual([1870, 770]);
+    // ✨ 내 집은 동쪽 내 정원 안 (TOWN-20)
+    const [x, y] = await feet(page);
+    const [cx, cy, rx, ry] = (await canvas(page).getAttribute("data-garden"))!.split(",").map(Number);
+    expect(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2).toBeLessThan(1);
+    await expect(page.locator("[data-town-prompt]")).toHaveText("🏠 내 집 · Space 들어가기");
   });
 
   test("알림: 안 읽은 수가 ☰에 붙고, 최근 알림을 누르면 읽고 그 글로, 알림함 전체 보기", async ({ page, browser }) => {
@@ -167,7 +172,7 @@ test.describe("TOWN-01 첫 마을 환영", () => {
     await door.click();
     await openTown(page, "");
     await expect(page.locator("[data-town-welcome]")).toContainText(`${username}님, 마을에 처음 나왔어요!`);
-    expect(await feet(page)).toEqual([1000, 1290]);
+    expect(await feet(page)).toEqual([1870, 770]);
     await expect(page).toHaveURL("/town");
     // 주소에서 welcome을 지운 뒤 화면을 다시 그려도(⭐) 환영과 서 있던 자리는 그대로
     await menuButton(page).click();
@@ -175,7 +180,7 @@ test.describe("TOWN-01 첫 마을 환영", () => {
     await panel(page).getByRole("button", { name: `${neighbor} 즐겨찾기` }).click();
     await expect(panel(page).getByRole("button", { name: `${neighbor}의 집으로 텔레포트` })).toBeVisible();
     await expect(page.locator("[data-town-welcome]")).toBeVisible();
-    expect(await feet(page)).toEqual([1000, 1290]);
+    expect(await feet(page)).toEqual([1870, 770]);
     await page.reload();
     await openTown(page, "");
     await expect(page.locator("[data-town-welcome]")).toHaveCount(0);

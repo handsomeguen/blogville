@@ -1,13 +1,15 @@
 // 이웃 집 자리 고르기 (TOWN-18, specs/049-town-lots): 화면과 서버가 같이 쓴다.
+import { CENTER, HOUSE_LOTS } from "./layout";
+import { CLIFF_LINES } from "./terrain";
 
 /** 이웃 집 자리 번호 (0번은 주인의 집) */
 export const NEIGHBOR_LOTS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
-/** 자리가 있는 곳 */
+/** 자리가 있는 곳: 남쪽 들판, 아니면 광장 서쪽·동쪽 길 (내 정원 자리 이동, TOWN-20) */
 export function lotArea(lot: number): string {
-  if (lot >= 1 && lot <= 4) return "서쪽 길";
-  if (lot >= 5 && lot <= 8) return "동쪽 길";
-  return "남쪽 들판";
+  const p = HOUSE_LOTS[lot];
+  if (p.y > CLIFF_LINES[1]) return "남쪽 들판";
+  return p.x < CENTER.x ? "서쪽 길" : "동쪽 길";
 }
 
 export function isNeighborLot(value: unknown): value is number {

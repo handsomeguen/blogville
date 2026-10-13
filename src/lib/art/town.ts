@@ -454,3 +454,92 @@ export function lampArt(): PixelArt {
   frame(g, 1, 0, 4, 4, "n");
   return art(g, { N: "#4a4a4a", n: "#2b2b2b", L: "#ffe28a" });
 }
+
+/** 정원 장미 아치 문 (TOWN-20): 흰 격자 기둥 둘, 위는 둥근 덩굴과 장미. 기둥 사이(가운데 18칸)로 지나간다 */
+export function gardenArchArt(): PixelArt {
+  const g = grid(24, 30);
+  // 기둥: 흰 격자 (가로대는 3칸마다)
+  for (const x of [0, 21]) {
+    fill(g, x, 8, 3, 22, "W");
+    fill(g, x + 1, 8, 1, 22, "w");
+    for (let y = 9; y < 30; y += 3) fill(g, x, y, 3, 1, "w");
+  }
+  // 둥근 덩굴 (반원 띠)
+  for (let y = 0; y < 10; y++) {
+    const t = (9.5 - y) / 9.5;
+    const outer = Math.round(12 * Math.sqrt(Math.max(0, 1 - t * t)));
+    const inner = Math.max(0, outer - 4);
+    fill(g, 12 - outer, y, outer - inner, 1, "G");
+    fill(g, 12 + inner, y, outer - inner, 1, "G");
+  }
+  fill(g, 0, 8, 3, 4, "G");
+  fill(g, 21, 8, 3, 4, "G");
+  // 기둥을 타고 내려오는 덩굴
+  for (const [x, y] of [
+    [0, 14],
+    [2, 17],
+    [1, 21],
+    [22, 15],
+    [21, 19],
+    [23, 23],
+  ])
+    g[y][x] = "g";
+  // 장미 (빨강·분홍)
+  for (const [x, y, c] of [
+    [2, 4, "R"],
+    [5, 1, "P"],
+    [9, 0, "R"],
+    [14, 0, "P"],
+    [18, 1, "R"],
+    [21, 4, "P"],
+    [1, 9, "P"],
+    [22, 10, "R"],
+    [3, 7, "R"],
+    [20, 7, "R"],
+    [0, 15, "R"],
+    [23, 18, "P"],
+  ] as const)
+    g[y][x] = c;
+  return art(g, { W: "#fbfaf5", w: "#d9d4c5", G: "#3f8f3a", g: "#5fae4f", R: "#e0414f", P: "#ff9fb8" });
+}
+
+/** 정원 앞 흰 울타리 한 칸 (TOWN-20): 뾰족한 말뚝 넷과 가로대 둘 */
+export function fenceArt(): PixelArt {
+  const g = grid(10, 8);
+  for (const x of [0, 3, 6, 9]) {
+    fill(g, x, 1, 1, 7, "W");
+    g[0][x] = "w";
+  }
+  fill(g, 0, 3, 10, 1, "W");
+  fill(g, 0, 6, 10, 1, "W");
+  fill(g, 0, 7, 10, 1, "w");
+  return art(g, { W: "#fbfaf5", w: "#d9d4c5" });
+}
+
+/** 정원 뒤 귀퉁이 벚나무 (TOWN-20): 분홍 꽃 덩이, 흰 꽃잎 점 */
+export function cherryTreeArt(): PixelArt {
+  const g = grid(14, 18);
+  fill(g, 6, 11, 2, 7, "N");
+  g[12][5] = "N";
+  g[11][8] = "N";
+  for (let y = 0; y < 13; y++) {
+    const t = (y - 6) / 6.5;
+    const half = Math.round(7 * Math.sqrt(Math.max(0, 1 - t * t)));
+    fill(g, 7 - half, y, half * 2, 1, "L");
+  }
+  for (let y = 7; y < 13; y++) {
+    const t = (y - 6) / 6.5;
+    const half = Math.round(7 * Math.sqrt(Math.max(0, 1 - t * t)));
+    fill(g, 7 - half, y, Math.max(1, half - 1), 1, "D");
+  }
+  for (const [x, y] of [
+    [4, 2],
+    [9, 3],
+    [6, 5],
+    [11, 7],
+    [3, 8],
+    [8, 9],
+  ])
+    g[y][x] = "H";
+  return art(g, { N: "#6b4226", L: "#ffb7c9", D: "#f28cab", H: "#fff0f5" });
+}

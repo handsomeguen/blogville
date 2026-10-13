@@ -148,8 +148,8 @@ describe("☰ 텔레포트 목록 (TOWN-12)", () => {
 });
 
 describe("높낮이 (TOWN-05)", () => {
-  it("계단은 4곳, 길보다 넓고 앞면 조각과 겹치지 않으며 계단 위는 느리게", () => {
-    expect(STAIRS).toHaveLength(4);
+  it("계단은 절벽 4곳 + 정원 1곳, 길보다 넓고 앞면 조각과 겹치지 않으며 계단 위는 느리게", () => {
+    expect(STAIRS.map((s) => s.id)).toEqual(["north-west", "north-east", "south-west", "south-east", "garden"]);
     for (const st of STAIRS) {
       expect(st.rect.width).toBeGreaterThan(52);
       const inner = { x: st.rect.x + 8, y: st.rect.y, width: st.rect.width - 16, height: st.rect.height };

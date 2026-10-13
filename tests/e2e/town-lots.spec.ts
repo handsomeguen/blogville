@@ -74,7 +74,7 @@ test.describe("TOWN-18 이웃 집 자리 고르기", () => {
     // ✨로 5번 자리 앞에 가면 a의 집
     await panel(page).getByRole("button", { name: "5번 자리로 텔레포트" }).click();
     await expect(panel(page)).toHaveCount(0);
-    await expect(canvas(page)).toHaveAttribute("data-feet", "1700,420");
+    await expect(canvas(page)).toHaveAttribute("data-feet", "1320,420");
     await expect(page.locator("[data-town-prompt]")).toHaveText(`🏠 ${short(a)}의 집 · Space 들어가기`);
     // 다시 열어도 그대로 (텔레포트 목록도 같은 자리)
     await page.reload();

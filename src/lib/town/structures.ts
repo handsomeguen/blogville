@@ -1,10 +1,30 @@
 // 마을에 놓을 것과 입구 (TOWN-03·04, specs/038-town). 그림은 `src/lib/art/town.ts`, 좌표는 `layout.ts`.
 import type { PixelArt } from "@/lib/art/characters";
-import { benchArt, boardArt, emptyLotArt, farmArt, pondArt, fountainArt, houseArt, lampArt, mailboxArt, shopArt, TOWN_CELL, treeArt } from "@/lib/art/town";
+import {
+  benchArt,
+  boardArt,
+  cherryTreeArt,
+  emptyLotArt,
+  farmArt,
+  fenceArt,
+  fountainArt,
+  gardenArchArt,
+  houseArt,
+  lampArt,
+  mailboxArt,
+  pondArt,
+  shopArt,
+  TOWN_CELL,
+  treeArt,
+} from "@/lib/art/town";
 import {
   BOARD_POS,
   CENTER,
   FOUNTAIN_POS,
+  GARDEN,
+  GARDEN_APPROACH,
+  gardenEdge,
+  GARDEN_FRONT_Y,
   HILL_ROAD,
   HOUSE_LOTS,
   lotFront,
@@ -63,7 +83,25 @@ export function lotChoice(href: string): number | null {
 /** 우체통은 집 오른쪽 앞 (집 발밑에서) */
 export const MAILBOX_OFFSET = { x: 118, y: 6 } as const;
 
-/** `walls`: 걸을 수 없는 땅 (절벽 앞면·하늘, TOWN-05) */
+/** 정원 아치 문 발밑 (TOWN-20): 정원 계단 꼭대기 */
+export const GARDEN_GATE = { x: GARDEN.cx, y: GARDEN_FRONT_Y - 4 } as const;
+
+/** 아치 문 기둥 둘 (걸을 수 없다). 기둥 사이 90px로 지나간다 */
+export const GARDEN_GATE_POSTS: readonly Rect[] = [
+  { x: GARDEN_GATE.x - 60, y: GARDEN_GATE.y - 8, width: 15, height: 8 },
+  { x: GARDEN_GATE.x + 45, y: GARDEN_GATE.y - 8, width: 15, height: 8 },
+];
+
+/** 정원 앞 흰 울타리 칸의 가운데 x (아치 문 양옆으로 50px마다, 타원 끝 가까이는 비운다) */
+export const GARDEN_FENCE_XS: readonly number[] = [75, 125, 175, 225, 275].flatMap((d) => [GARDEN.cx - d, GARDEN.cx + d]).sort((a, b) => a - b);
+
+/** 정원 뒤 귀퉁이 벚나무 둘 */
+export const GARDEN_TREES: readonly { x: number; y: number }[] = [
+  { x: GARDEN.cx - 275, y: 650 },
+  { x: GARDEN.cx + 275, y: 650 },
+];
+
+/** `walls`: 걸을 수 없는 땅 (절벽 앞면·하늘, TOWN-05, 정원 둘레와 아치 문 기둥, TOWN-20) */
 export type TownLayout = { structures: Structure[]; entrances: TownEntrance[]; walls: readonly Rect[] };
 
 /** 그림 크기 (px) */
@@ -161,6 +199,17 @@ export function townLayout(houses: readonly TownHouseInput[], member: boolean, m
     y: FARM_POS.y + 30,
     label: "🐮 동물 농장",
     href: member ? "/farm" : "login",
+  });
+
+  // 내 정원 (TOWN-20): 계단 꼭대기 장미 아치 문, 앞 가장자리 흰 울타리, 뒤 귀퉁이 벚나무. 집(0번)·농장·우체통 말고 다른 건물은 없다
+  structures.push({ id: "garden-arch", art: gardenArchArt(), x: GARDEN_GATE.x, y: GARDEN_GATE.y, body: null });
+  const fence = fenceArt();
+  for (const x of GARDEN_FENCE_XS) {
+    structures.push({ id: `garden-fence:${x}`, art: fence, x, y: Math.round(gardenEdge(x)!.bottom) - 1, body: null });
+  }
+  const cherry = cherryTreeArt();
+  GARDEN_TREES.forEach((t, i) => {
+    structures.push({ id: `garden-tree:${i}`, art: cherry, x: t.x, y: t.y, body: { x: t.x - 10, y: t.y - 10, width: 20, height: 10 } });
   });
 
   structures.push({
@@ -270,10 +319,11 @@ export function townLayout(houses: readonly TownHouseInput[], member: boolean, m
     }
   });
 
-  // 나무: 마을 가장자리 숲 + 군데군데. 길·광장·건물 근처는 비운다
+  // 나무: 마을 가장자리 숲 + 군데군데. 길·광장·건물·내 정원 근처는 비운다
   const random = seeded(20261012);
   const keepOut: Rect[] = [
-    ...ROADS.map((r) => ({
+    { x: GARDEN.cx - GARDEN.rx - 40, y: GARDEN.cy - GARDEN.ry - 30, width: (GARDEN.rx + 40) * 2, height: GARDEN.ry * 2 + 120 },
+    ...[...ROADS, ...GARDEN_APPROACH].map((r) => ({
       x: r.x - 20,
       y: r.y - 40,
       width: r.width + 40,
@@ -322,7 +372,7 @@ export function townLayout(houses: readonly TownHouseInput[], member: boolean, m
     });
   }
   structures.push(...trees);
-  return { structures, entrances, walls: TERRAIN_WALLS };
+  return { structures, entrances, walls: [...TERRAIN_WALLS, ...GARDEN_GATE_POSTS] };
 }
 
 /** ✨ 텔레포트 한 줄 (TOWN-12): 고르면 그 앞(`x`, `y`)으로. 빈 집터는 고를 수 없다 */
