@@ -166,7 +166,6 @@ export type HudNotification = { id: number; text: string; time: string; read: bo
 
 /** ☰ 메뉴에 보일 회원 정보 (TOWN-12): 지갑·안 읽은 수·최근 알림 5개·이웃 목록. 페이지를 열 때 한 번 읽는다 */
 export async function getHudMember(userId: string) {
-  const now = new Date();
   const [wallet, unread, recent, neighbors, blog, avatar, nickname] = await Promise.all([
     getWallet(userId),
     countUnreadNotifications(userId),
@@ -186,7 +185,7 @@ export async function getHudMember(userId: string) {
           : n.kind === "guestbook" || n.kind === "guestbook_reply"
             ? guestbookNotificationText(n.kind, n.nickname)
             : notificationText(n.kind, n.nickname, n.postTitle),
-    time: notificationTime(n.createdAt, now),
+    time: notificationTime(n.createdAt),
     read: n.read,
   }));
   return {

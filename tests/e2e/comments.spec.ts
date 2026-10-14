@@ -40,7 +40,7 @@ test.describe("US1 댓글 쓰기·삭제", () => {
     await expect(lines.nth(1).locator("p.whitespace-pre-wrap")).toHaveText('<b>굵게</b> https://a.com\n둘째 줄');
     await expect(lines.nth(1).locator("b, a[href='https://a.com']")).toHaveCount(0);
     await expect(lines.nth(0).getByRole("link")).toHaveAttribute("href", `/@${guest.username}`);
-    await expect(lines.nth(0).locator("time")).toHaveText(/^(방금 전|\d+분 전)$/);
+    await expect(lines.nth(0).locator("time")).toHaveText(/^\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}$/);
     await expect(lines.nth(0).locator("time")).toHaveAttribute("title", /^\d{4}년 \d{1,2}월 \d{1,2}일 오[전후] \d{1,2}:\d{2} \(한국 시간\)$/);
 
     const [{ content }] = await sql`select content from comments where post_id = ${id} order by id limit 1`;

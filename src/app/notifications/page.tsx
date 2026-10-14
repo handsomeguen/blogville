@@ -14,7 +14,6 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/no
   const member = await requireMember();
   const page = parsePage((await searchParams).page);
   const [{ items, total }, unread] = await Promise.all([listNotifications(member.userId, page), countUnreadNotifications(member.userId)]);
-  const now = new Date();
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -55,7 +54,7 @@ export default async function NotificationsPage({ searchParams }: PageProps<"/no
                         : notificationText(n.kind, n.nickname, n.postTitle)}
                   </span>
                   <time className="shrink-0 text-sm font-normal text-ink-soft" dateTime={n.createdAt.toISOString()} title={fullDateTime(n.createdAt)}>
-                    {notificationTime(n.createdAt, now)}
+                    {notificationTime(n.createdAt)}
                   </time>
                 </button>
               </form>

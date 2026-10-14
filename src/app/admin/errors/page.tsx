@@ -44,7 +44,7 @@ export default async function AdminErrorsPage({ searchParams }: PageProps<"/admi
           {items.map((e) => (
             <li key={e.id} className="space-y-1 py-3 text-sm" data-error-log={e.id} data-error-count={e.count}>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Time date={e.lastSeenAt} absolute seconds className="text-ink-soft" />
+                <Time date={e.lastSeenAt} seconds className="text-ink-soft" />
                 {e.routeType && <span className="rounded-full bg-accent/10 px-2 font-bold text-accent">{ROUTE_TYPES[e.routeType] ?? e.routeType}</span>}
                 <span className="font-semibold break-all" data-error-route>
                   {e.method ? `${e.method} ` : ""}
@@ -62,7 +62,7 @@ export default async function AdminErrorsPage({ searchParams }: PageProps<"/admi
                 <details>
                   <summary className="cursor-pointer text-ink-soft">자세히</summary>
                   <dl className="mt-1 space-y-1 text-ink-soft">
-                    <dd>처음: <Time date={e.createdAt} absolute seconds /></dd>
+                    <dd>처음: <Time date={e.createdAt} seconds /></dd>
                     {e.digest && <dd>digest: {e.digest}</dd>}
                     {e.userAgent && <dd className="break-all">브라우저: {e.userAgent}</dd>}
                   </dl>

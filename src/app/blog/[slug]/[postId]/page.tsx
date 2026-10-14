@@ -134,7 +134,7 @@ export default async function PostPage({ params, searchParams }: PageProps<"/blo
           {post.title}
         </h1>
         <p className="mt-2 text-sm text-ink-soft">
-          {nickname} · <Time date={post.createdAt} absolute />
+          {nickname} · <Time date={post.createdAt} />
           {edited && " · 수정됨"}
           {` · 약 ${readingMinutes(post.contentText)}분 읽기`}
           {" · "}

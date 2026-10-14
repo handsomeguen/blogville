@@ -1,6 +1,6 @@
 import { MAX_LEVEL } from "./game";
 import { withJosa } from "./josa";
-import { relativeTime } from "./time";
+import { formatDateTime } from "./time";
 
 // 알림함 문구·주소·시간 (GAME-08, specs/017-notifications · 레벨업 GAME-06, specs/034-level-up). 서버와 화면이 같이 쓴다.
 
@@ -63,9 +63,9 @@ export function isGuestbookKind(value: string): value is GuestbookKind {
   return value === "guestbook" || value === "guestbook_reply";
 }
 
-/** 알림 시각: `방금 전` / `N분 전` / `N시간 전` / `어제 14:05` / `2026.10.02 14:05` (한국 시간) */
-export function notificationTime(createdAt: Date, now: Date = new Date()): string {
-  return relativeTime(createdAt, now);
+/** 알림 시각: `2026.10.02 14:05` (한국 시간) */
+export function notificationTime(createdAt: Date): string {
+  return formatDateTime(createdAt);
 }
 
 export function isActivityKind(value: string): value is ActivityKind {

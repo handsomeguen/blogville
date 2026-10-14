@@ -42,7 +42,7 @@ export default async function ReleasePage({ params }: PageProps<"/updates/[tag]"
       <article className="min-w-0 space-y-3 rounded-2xl border border-line bg-surface p-5" data-release={r.tag}>
         <header className="space-y-1">
           <h1 className="text-2xl font-extrabold">{releaseTitle(r.name)}</h1>
-          <Time date={r.publishedAt} absolute className="block text-sm text-ink-soft" />
+          <Time date={r.publishedAt} className="block text-sm text-ink-soft" />
         </header>
         <div className="prose-post release-body min-w-0" dangerouslySetInnerHTML={{ __html: r.html }} />
         <a href={r.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm text-ink-soft underline">

@@ -73,7 +73,7 @@ test.describe("GAME-08 알림", () => {
     await expect(rows(owner.page)).toHaveCount(2);
     const newest = rows(owner.page).nth(0).getByRole("button");
     await expect(newest).toContainText(`💬 ${g.username}님이 「알림 글」에 댓글을 달았어요`);
-    await expect(newest).toContainText("방금");
+    await expect(newest).toContainText(/\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}/);
     await expect(rows(owner.page).nth(1).getByRole("button")).toContainText(`❤️ ${g.username}님이 「알림 글」에 공감했어요`);
     await expect(newest).toHaveAttribute("data-notification", "unread");
     await expect(newest).toHaveCSS("background-color", "rgb(255, 243, 214)");
@@ -144,11 +144,11 @@ test.describe("GAME-08 알림", () => {
 
     await owner.page.goto("/notifications");
     await expect(rows(owner.page)).toHaveCount(20);
-    await expect(rows(owner.page).first()).toContainText("1분 전");
+    await expect(rows(owner.page).first()).toContainText(/\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}/);
     await owner.page.getByRole("navigation", { name: "페이지" }).getByRole("link", { name: "2", exact: true }).click();
     await expect(owner.page).toHaveURL(/\/notifications\?page=2$/);
     await expect(rows(owner.page)).toHaveCount(2);
-    await expect(rows(owner.page).last()).toContainText("22분 전");
+    await expect(rows(owner.page).last()).toContainText(/\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}/);
     await owner.page.goto("/notifications?page=99999999999999999999");
     await expect(rows(owner.page)).toHaveCount(20);
 
@@ -183,11 +183,11 @@ test.describe("GAME-08 알림", () => {
     await expect(badge(owner.page)).toHaveText("1");
     await bell(owner.page).click();
     await expect(rows(owner.page)).toHaveCount(1);
-    await expect(rows(owner.page).getByRole("button")).toHaveAccessibleName(`안 읽음, 💬 ${actor.username}님이 「늦게 온 알림 글」에 댓글을 달았어요 방금 전`);
+    await expect(rows(owner.page).getByRole("button")).toHaveAccessibleName(new RegExp(`^안 읽음, 💬 ${actor.username}님이 「늦게 온 알림 글」에 댓글을 달았어요 \\d{4}\\.\\d{2}\\.\\d{2} \\d{2}:\\d{2}$`));
     await owner.page.getByRole("button", { name: "모두 읽음" }).click();
     await expect(owner.page.getByRole("button", { name: "모두 읽음" })).toHaveCount(0);
     await expect(badge(owner.page)).toHaveCount(0);
-    await expect(rows(owner.page).getByRole("button")).toHaveAccessibleName(`💬 ${actor.username}님이 「늦게 온 알림 글」에 댓글을 달았어요 방금 전`);
+    await expect(rows(owner.page).getByRole("button")).toHaveAccessibleName(new RegExp(`^💬 ${actor.username}님이 「늦게 온 알림 글」에 댓글을 달았어요 \\d{4}\\.\\d{2}\\.\\d{2} \\d{2}:\\d{2}$`));
 
     await owner.page.goto("/notifications?page=2");
     await expect(owner.page.getByText("아직 알림이 없어요")).toBeVisible();
