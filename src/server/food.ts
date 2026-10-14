@@ -5,6 +5,8 @@ import { blogs, posts, profiles } from "@/db/schema";
 import { likePattern } from "@/lib/blog-search";
 import { todayKST } from "@/lib/kst";
 import {
+  analyzeReviewPage,
+  mobileBlogUrl,
   FOOD_RADIUS_M,
   FOOD_RECENT_CAP,
   FOOD_REGION_TOP,
@@ -175,11 +177,45 @@ export type PlaceDetail = {
   local: { id: number; title: string; slug: string; nickname: string; createdAt: Date }[];
 };
 
+const BLOG_BASE = () => process.env.FOOD_BLOG_BASE ?? "https://m.blog.naver.com";
+const PAGE_TTL_MS = 24 * 3_600_000;
+const pageCache = new Map<string, { at: number; value: Promise<{ image: string | null; sponsored: "yes" | "no" | null }> }>();
+
+/** 후기 글 한 편의 대표 사진·협찬 표시 (네이버 블로그만, 하루 기억). 못 읽으면 둘 다 null */
+function reviewPage(url: string) {
+  const m = mobileBlogUrl(url);
+  if (!m) return Promise.resolve({ image: null, sponsored: null });
+  const hit = pageCache.get(m);
+  if (hit && Date.now() - hit.at < PAGE_TTL_MS) return hit.value;
+  const value = fetch(m.replace("https://m.blog.naver.com", BLOG_BASE()), {
+    headers: { "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Blogville", Accept: "text/html" },
+    signal: AbortSignal.timeout(4_000),
+    cache: "no-store",
+  })
+    .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`blog ${res.status}`))))
+    .then((html) => analyzeReviewPage(html.slice(0, 600_000)))
+    .catch(() => ({ image: null, sponsored: null }) as const);
+  pageCache.set(m, { at: Date.now(), value });
+  if (pageCache.size > 3_000) for (const [k, v] of pageCache) if (Date.now() - v.at >= PAGE_TTL_MS) pageCache.delete(k);
+  return value;
+}
+
+/** 후기마다 대표 사진·협찬 표시를 붙인다 (동시에 5편씩) */
+async function withCards(reviews: FoodReview[]): Promise<FoodReview[]> {
+  const out: FoodReview[] = [];
+  for (let i = 0; i < reviews.length; i += 5) {
+    const chunk = reviews.slice(i, i + 5);
+    const pages = await Promise.all(chunk.map((r) => reviewPage(r.url)));
+    chunk.forEach((r, j) => out.push({ ...r, ...pages[j] }));
+  }
+  return out;
+}
+
 /** 식당 하나: 정보 + 네이버 블로그 후기 10편 + Blogville 이웃 글 */
 export async function placeDetail(place: FoodPlace): Promise<PlaceDetail> {
   const reviews: FoodResult<FoodReview[]> = naverFoodEnabled()
     ? await settle(
-        () => remember(`reviews|${reviewQuery(place)}`, async () => parseReviews(await naver("/search/v1/blog", { query: reviewQuery(place), display: 10, sort: "sim" }))),
+        () => remember(`reviews|${reviewQuery(place)}`, async () => withCards(parseReviews(await naver("/search/v1/blog", { query: reviewQuery(place), display: 10, sort: "sim" })))),
         "블로그 후기",
       )
     : { status: "off" };

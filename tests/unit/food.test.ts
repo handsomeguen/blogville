@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  analyzeReviewPage,
   buzzLabel,
   cleanText,
   countRecent,
   dedupePlaces,
   distanceLabel,
+  mobileBlogUrl,
   parseCoords,
   parseFoodQuery,
   parseKakaoPlaces,
@@ -95,5 +97,34 @@ describe("🍽 맛집 규칙", () => {
     expect(reviewWriteHref({ name: "가&나", address: "광주", mapUrl: "https://x", category: "한식" })).toBe(
       "/write?place_name=%EA%B0%80%26%EB%82%98&place_address=%EA%B4%91%EC%A3%BC&place_url=https%3A%2F%2Fx&place_category=%ED%95%9C%EC%8B%9D",
     );
+  });
+});
+
+describe("블로그 후기 카드: 대표 사진·협찬 표시 (analyzeReviewPage)", () => {
+  const page = (body: string, og = "https://blogthumb.pstatic.net/a/b.jpg?type=w2") =>
+    `<html><head><meta property="og:image" content="${og}"/></head><body><div class="se-main-container">${body}</div></body></html>`;
+  it("og:image는 네이버(pstatic) 사진만", () => {
+    expect(analyzeReviewPage(page("맛있다")).image).toBe("https://blogthumb.pstatic.net/a/b.jpg?type=w2");
+    expect(analyzeReviewPage(page("맛있다", "https://evil.example/x.jpg")).image).toBeNull();
+  });
+  it.each([
+    ["업체로부터 제품을 제공받아 솔직하게 작성했습니다", "yes"],
+    ["소정의 원고료를 받고 작성한 후기입니다", "yes"],
+    ["#협찬 #광주맛집", "yes"],
+    ["레뷰 체험단으로 다녀왔어요", "yes"],
+    ["오늘은 협찬으로 다녀온 곳", "yes"],
+    ["여긴 협찬 아니고 직접 구매해서 먹었는데도 진짜 인정한다", "no"],
+    ["(아무리 협찬일지라도 맛없으면 티난다) 내돈내산 후기", "no"],
+    ["그냥 맛있었다", null],
+  ] as const)("%s → %s", (body, want) => {
+    expect(analyzeReviewPage(page(body)).sponsored).toBe(want);
+  });
+  it("관련 글 목록 등 본문 앞부분(헤더)의 협찬은 보지 않는다", () => {
+    expect(analyzeReviewPage(`<title>협찬 받은 글</title>${page("그냥 맛있었다")}`).sponsored).toBeNull();
+  });
+  it("네이버 블로그 주소만 모바일 주소로", () => {
+    expect(mobileBlogUrl("https://blog.naver.com/abc_1/224436664230")).toBe("https://m.blog.naver.com/abc_1/224436664230");
+    expect(mobileBlogUrl("https://m.blog.naver.com/abc/224436664230?x=1")).toBe("https://m.blog.naver.com/abc/224436664230");
+    expect(mobileBlogUrl("https://tistory.com/abc/1")).toBeNull();
   });
 });

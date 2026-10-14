@@ -21,6 +21,10 @@ export type FoodReview = {
   url: string;
   blogger: string;
   date: string; // YYYY-MM-DD
+  /** 글의 대표 사진 (네이버 블로그 og:image). 못 읽으면 null */
+  image?: string | null;
+  /** 협찬 표시: yes = 글에 협찬·제공·원고료 등이 적혀 있음, no = "내돈내산"·"협찬 아님", null = 모름 */
+  sponsored?: "yes" | "no" | null;
 };
 
 export const FOOD_TABS = [
@@ -239,4 +243,37 @@ export function buzzLabel(recent: number): string {
 export function distanceLabel(m: number | null): string {
   if (m == null) return "";
   return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`;
+}
+
+// ── 블로그 후기 카드: 대표 사진과 협찬 표시 ──────────────────────────────────────────────
+// 네이버 블로그 글(모바일 화면)을 서버가 한 번 읽어 og:image와 본문의 공정위 표시 문구를 찾는다. 자동 판별이라 틀릴 수 있다.
+
+/** blog.naver.com/아이디/글번호 → m.blog.naver.com/아이디/글번호 (본문이 한 화면에 있다). 네이버 블로그가 아니면 null */
+export function mobileBlogUrl(url: string): string | null {
+  const m = /^https?:\/\/(?:m\.)?blog\.naver\.com\/([A-Za-z0-9_-]+)\/(\d{6,})/.exec(url);
+  return m ? `https://m.blog.naver.com/${m[1]}/${m[2]}` : null;
+}
+
+const STRONG = /(원고료|소정의\s*(?:원고료|수수료|고료|사례)|제공\s*받|지원\s*받|무상\s*(?:으로\s*)?(?:제공|지원)|업체(?:로부터|에서)\s*(?:제공|지원|협찬)|체험단|협찬\s*(?:을|를)?\s*받|협찬\s*(?:으로|글|후기|포스팅|리뷰)|#\s*협찬|광고\s*(?:를|을)?\s*포함|유료\s*광고|revu\.net|reviewnote|dinnerqueen|레뷰|리뷰노트|디너의\s*여왕)/i;
+const NEGATED = /협찬\s*(?:이|은|도)?\s*(?:아니|아님|아닌|아닙|X|x|없|NO|no)|내\s*돈\s*내\s*산|직접\s*(?:구매|결제|사서|사\s*먹)/g;
+const CONDITIONAL = /협찬\s*(?:일지라도|이라도|이더라도|이든|받(?:았|은)?다면|받으면)/g;
+
+/** 블로그 글 HTML → 대표 사진·협찬 표시 */
+export function analyzeReviewPage(html: string): { image: string | null; sponsored: "yes" | "no" | null } {
+  const og = /<meta\s+property="og:image"\s+content="([^"]+)"/i.exec(html)?.[1] ?? null;
+  const image = og && /^https:\/\/[a-z0-9.-]+\.pstatic\.net\//i.test(og) ? og.replace(/&amp;/g, "&") : null;
+  const start = Math.max(0, html.search(/se-main-container|class="post_ct/));
+  const text = html
+    .slice(start)
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<img[^>]*src="([^"]*)"[^>]*>/gi, " $1 ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ");
+  if (STRONG.test(text)) return { image, sponsored: "yes" };
+  const negated = text.match(NEGATED)?.length ?? 0;
+  const rest = text.replace(NEGATED, " ").replace(CONDITIONAL, " ");
+  if (/협찬/.test(rest)) return { image, sponsored: "yes" };
+  if (negated > 0) return { image, sponsored: "no" };
+  return { image, sponsored: null };
 }
