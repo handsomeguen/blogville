@@ -40,4 +40,6 @@ jobs:
             echo "== 상태 확인 (/api/health: 버전·DB)"; curl -s -m 10 -w ' HTTP %{http_code}\n' http://127.0.0.1:8400/api/health || echo "응답 없음"
             ACTIVE=$(cat ~/blogville/state/active 2>/dev/null || echo blue); APP="bv8400-$ACTIVE"; echo "== 서비스 중: $APP"
             echo "== 관리자 계정 점검 (값은 찍지 않음)"; $D exec -e ADMIN_USERNAME="$ADMIN_USERNAME" -e ADMIN_PASSWORD="$ADMIN_PASSWORD" "$APP" node scripts/check-admin.mjs || echo "점검 스크립트가 없는 버전이에요 (다음 배포 뒤 다시)"
+            echo "== 주식 상태 (/api/stocks/status)"; curl -s -m 20 http://127.0.0.1:8400/api/stocks/status | head -c 6000; echo
+            echo "== 주식 시세 (/api/stocks/quotes?blog=ckd3298)"; curl -s -m 20 "http://127.0.0.1:8400/api/stocks/quotes?blog=ckd3298" | head -c 6000; echo
             echo "== 최근 로그"; $D logs --tail 30 "$APP" 2>&1 | grep -vE "collation|severity|01000|detail:|hint:|file:|line:|routine:|^\{|^\}" | tail -30
