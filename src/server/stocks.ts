@@ -16,7 +16,7 @@ import { isUsDayMarketTime, parseIndexChart, parseNaverQuote, parseNaverSearchIt
 const QUOTE_BASE = () => process.env.STOCK_QUOTE_BASE ?? "https://polling.finance.naver.com";
 const CHART_BASE = () => process.env.STOCK_CHART_BASE ?? "https://api.stock.naver.com";
 const SEARCH_BASE = () => process.env.STOCK_SEARCH_BASE ?? "https://ac.stock.naver.com";
-// 실시간 스트림(1.5초마다)이 같은 종목을 여러 화면에 보내도 네이버에는 종목마다 1초에 한 번만 묻는다
+// 실시간 스트림(1초마다)이 같은 종목을 여러 화면에 보내도 네이버에는 종목마다 1초에 한 번만 묻는다
 const QUOTE_TTL_MS = 1_000;
 const SEARCH_TTL_MS = 60_000;
 const TIMEOUT_MS = 3_000;
@@ -120,7 +120,7 @@ export async function getQuotes(items: StockItem[]): Promise<StockQuote[]> {
   const yahooCodes = kis ? [] : items.filter((_, i) => dayWanted(i)).map((item) => item.code);
   const [kisDays, yahooApi, streams] = await Promise.all([
     Promise.all(items.map((item, i) => (kis && dayWanted(i) ? getDayPrice(item.code) : null))),
-    // 야후 시세 API(3초마다, 한 번에 여러 종목) → 야후 실시간 스트림 → 야후 시세 화면(15초마다)
+    // 야후 시세 API(3초마다, 한 번에 여러 종목) → 야후 실시간 스트림 → 야후 시세 화면(3초마다)
     yahooCodes.length ? getQuoteOvernight(yahooCodes) : new Map<string, { price: number; change: number | null; rate: number | null }>(),
     Promise.all(items.map((item, i) => (!kis && dayWanted(i) ? getStreamOvernight(item.code, 0) : null))),
   ]);
