@@ -1,5 +1,6 @@
 import "server-only";
 import { parseYahooOvernight, yahooTicker } from "@/lib/stocks";
+import { describeFetchError } from "./yahoo-quote";
 
 // 📈 미국 주식 데이마켓(Overnight, 블루오션) 가격: 야후 파이낸스 공개 시세 화면에서 읽는다.
 // 공식 API가 아니라 화면이 바뀌면 못 읽을 수 있다. 그때는 크라켄 토큰 가격으로 넘어간다 (src/server/stocks.ts).
@@ -76,7 +77,7 @@ function load(ticker: string): Promise<Overnight | null> {
     lastResult = `${new Date().toISOString()} ${ticker} ${v ? `가격 ${v.price}` : `데이마켓 값 없음 (${html.length}자, ${res.url})`}`;
     return v;
   })().catch((e: unknown) => {
-    lastResult = `${new Date().toISOString()} ${ticker} 오류 ${e instanceof Error ? e.message : String(e)}`;
+    lastResult = `${new Date().toISOString()} ${ticker} 오류 ${describeFetchError(e)}`;
     console.warn("[yahoo] 데이마켓 가격을 못 받음", ticker, e instanceof Error ? e.message : e);
     return null;
   });

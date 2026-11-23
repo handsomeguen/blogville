@@ -6,6 +6,7 @@ import { isUniqueViolation } from "./names";
 import { getDayPrice, kisEnabled } from "./kis";
 import { getTokenPrices } from "./kraken";
 import { getYahooOvernight } from "./yahoo";
+import { getQuoteOvernight } from "./yahoo-quote";
 import { getStreamOvernight } from "./yahoo-stream";
 import { isUsDayMarketTime, parseIndexChart, parseNaverQuote, parseNaverSearchItem, STOCK_ERRORS, STOCK_INDEXES, STOCK_MAX, type StockIndex, type StockIndexCode, type StockItem, type StockQuote } from "@/lib/stocks";
 
@@ -116,11 +117,16 @@ export async function getQuotes(items: StockItem[]): Promise<StockQuote[]> {
   const dayTime = isUsDayMarketTime();
   const dayWanted = (i: number) => dayTime && items[i].market === "US" && !!rows[i] && (!rows[i]!.session || rows[i]!.session === "afterClose");
   const kis = kisEnabled();
-  const [kisDays, yahoos] = await Promise.all([
+  const yahooCodes = kis ? [] : items.filter((_, i) => dayWanted(i)).map((item) => item.code);
+  const [kisDays, yahooApi, streams] = await Promise.all([
     Promise.all(items.map((item, i) => (kis && dayWanted(i) ? getDayPrice(item.code) : null))),
-    // 야후 실시간 스트림(체결마다, 기다림 없음) → 못 받으면 야후 시세 화면(15초마다)
-    Promise.all(items.map(async (item, i) => (!kis && dayWanted(i) ? ((await getStreamOvernight(item.code)) ?? (await getYahooOvernight(item.code))) : null))),
+    // 야후 시세 API(3초마다, 한 번에 여러 종목) → 야후 실시간 스트림 → 야후 시세 화면(15초마다)
+    yahooCodes.length ? getQuoteOvernight(yahooCodes) : new Map<string, { price: number; change: number | null; rate: number | null }>(),
+    Promise.all(items.map((item, i) => (!kis && dayWanted(i) ? getStreamOvernight(item.code, 0) : null))),
   ]);
+  const yahoos = await Promise.all(
+    items.map(async (item, i) => (!kis && dayWanted(i) ? (yahooApi.get(item.code) ?? streams[i] ?? (await getYahooOvernight(item.code))) : null)),
+  );
   const needToken = items.map((_, i) => dayWanted(i) && !kisDays[i] && !yahoos[i]);
   const tokens = needToken.some(Boolean) ? await getTokenPrices(items.filter((_, i) => needToken[i]).map((it) => it.code)) : new Map<string, number>();
   return items.map((item, i) => {
