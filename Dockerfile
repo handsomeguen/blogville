@@ -13,7 +13,9 @@ FROM node:22-alpine
 # GHCR 이미지를 저장소와 이어 준다(저장소 화면 Packages에 보임)
 LABEL org.opencontainers.image.source=https://github.com/handsomeguen/blogville
 WORKDIR /app
+# 야후 시세 화면의 응답 헤더가 약 43KB라 Node 기본 상한(16KB)으로는 "fetch failed"(헤더 넘침)가 난다 → 64KB
 ENV NODE_ENV=production \
+    NODE_OPTIONS=--max-http-header-size=65536 \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=8400 \
     UPLOAD_DIR=storage/uploads

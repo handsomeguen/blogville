@@ -56,6 +56,30 @@ export function parseYahooOvernight(html: string): { price: number; change: numb
   return { price, change, rate };
 }
 
+/**
+ * 야후 시세 API(v7/finance/quote) 응답의 데이마켓(Overnight, 블루오션) 가격. 종목별로 돌려준다.
+ * 등락률은 등락과 가격으로 직접 계산한다 (응답의 % 칸은 formatted 여부에 따라 단위가 달라서).
+ * 체결이 maxAgeMs보다 오래됐으면(지난 데이마켓 값) 넣지 않는다.
+ */
+export function parseYahooQuoteOvernight(json: unknown, now = Date.now(), maxAgeMs = 12 * 3_600_000): Map<string, { price: number; change: number | null; rate: number | null }> {
+  const out = new Map<string, { price: number; change: number | null; rate: number | null }>();
+  const result = (json as { quoteResponse?: { result?: unknown } } | null)?.quoteResponse?.result;
+  if (!Array.isArray(result)) return out;
+  const num = (v: unknown) => toNumber(v !== null && typeof v === "object" && "raw" in v ? (v as { raw: unknown }).raw : v);
+  for (const r of result as Record<string, unknown>[]) {
+    const symbol = typeof r?.symbol === "string" ? r.symbol.toUpperCase() : null;
+    const price = num(r?.overnightMarketPrice);
+    const time = num(r?.overnightMarketTime);
+    if (!symbol || price === null || price <= 0 || time === null || now - time * 1000 > maxAgeMs) continue;
+    const rawChange = num(r?.overnightMarketChange);
+    const change = rawChange === null ? null : Math.round(rawChange * 100) / 100;
+    const close = change === null ? null : price - change;
+    const rate = change !== null && close ? Math.round((change / close) * 10000) / 100 : null;
+    out.set(symbol, { price: Math.round(price * 100) / 100, change, rate });
+  }
+  return out;
+}
+
 /** 야후 실시간 스트림(streamer.finance.yahoo.com) 한 줄: 프로토콜 버퍼(PricingData)를 base64로 보낸다 */
 export type YahooTick = { id: string; price: number; time: number; marketHours: number | null; changePercent: number | null; change: number | null };
 
