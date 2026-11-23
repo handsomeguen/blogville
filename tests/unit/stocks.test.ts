@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseYahooTick, yahooTicker, parseYahooOvernight, krakenPair, parseKrakenTicker, isUsDayMarketTime, kisDaySymbol, parseKisPrice, checkStock, formatChange, formatPrice, parseIndexChart, parseNaverQuote, parseNaverSearchItem, toNumber } from "@/lib/stocks";
+import { parseYahooTick, yahooTicker, parseYahooOvernight, parseYahooQuoteOvernight, krakenPair, parseKrakenTicker, isUsDayMarketTime, kisDaySymbol, parseKisPrice, checkStock, formatChange, formatPrice, parseIndexChart, parseNaverQuote, parseNaverSearchItem, toNumber } from "@/lib/stocks";
 
 describe("관심 종목 규칙", () => {
   it("국내 6자리·미국 로이터 코드만 받는다", () => {
@@ -186,6 +186,37 @@ describe("야후 데이마켓(Overnight) 가격", () => {
     const down = html.replace("+23.38", "-1.50").replace("(+3.22%)", "(-0.21%)");
     expect(parseYahooOvernight(down)).toEqual({ price: 748.49, change: -1.5, rate: -0.21 });
     expect(parseYahooOvernight('<span data-testid="qsp-price">725.11 </span>')).toBeNull();
+  });
+});
+
+describe("야후 시세 API 데이마켓 가격", () => {
+  const now = 1795409669_000 + 60_000;
+  it("overnightMarket 칸을 읽고 등락률은 직접 계산한다 (raw 감싸기도)", () => {
+    const json = {
+      quoteResponse: {
+        result: [
+          { symbol: "AAPL", overnightMarketPrice: 348.07, overnightMarketChange: 5.51, overnightMarketChangePercent: 1.608, overnightMarketTime: 1795409669 },
+          { symbol: "MU", overnightMarketPrice: { raw: 621.2, fmt: "621.20" }, overnightMarketChange: { raw: -3.3 }, overnightMarketTime: { raw: 1795409600 } },
+        ],
+      },
+    };
+    const got = parseYahooQuoteOvernight(json, now);
+    expect(got.get("AAPL")).toEqual({ price: 348.07, change: 5.51, rate: 1.61 });
+    expect(got.get("MU")).toEqual({ price: 621.2, change: -3.3, rate: -0.53 });
+  });
+
+  it("데이마켓 값이 없거나 12시간 넘게 지난 체결이면 뺀다", () => {
+    const json = {
+      quoteResponse: {
+        result: [
+          { symbol: "AAPL", regularMarketPrice: 342.56 },
+          { symbol: "MU", overnightMarketPrice: 600, overnightMarketChange: 1, overnightMarketTime: 1795409669 - 13 * 3600 },
+        ],
+      },
+    };
+    expect(parseYahooQuoteOvernight(json, now).size).toBe(0);
+    expect(parseYahooQuoteOvernight(null, now).size).toBe(0);
+    expect(parseYahooQuoteOvernight({ finance: { error: { code: "Unauthorized" } } }, now).size).toBe(0);
   });
 });
 
