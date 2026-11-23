@@ -13,8 +13,8 @@ const TIMEOUT_MS = 4_000;
 const TTL_MS = 3_000;
 // 쿠키·crumb은 6시간 쓰고, 401이 오면 바로 새로 받는다
 const AUTH_TTL_MS = 6 * 3_600_000;
-// 실패하면 1분 동안은 묻지 않는다 (막혔을 때 위젯이 매번 기다리지 않게)
-const FAIL_TTL_MS = 60_000;
+// 실패하면 10분 동안은 묻지 않는다 (막혔을 때 위젯이 기다리지 않고, 야후 429를 더 부르지 않게)
+const FAIL_TTL_MS = 10 * 60_000;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36";
 const FIELDS = "overnightMarketPrice,overnightMarketChange,overnightMarketChangePercent,overnightMarketTime,regularMarketPrice";
 
