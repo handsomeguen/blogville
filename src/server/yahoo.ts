@@ -7,8 +7,8 @@ import { describeFetchError } from "./yahoo-quote";
 // 시험은 YAHOO_QUOTE_BASE로 가짜 서버를 가리킨다.
 const BASE = () => process.env.YAHOO_QUOTE_BASE ?? "https://finance.yahoo.com";
 const TIMEOUT_MS = 5_000;
-// 화면이 무거워(약 1MB) 종목마다 15초에 한 번만 받는다
-const TTL_MS = 15_000;
+// 화면이 무거워(앞쪽 약 400KB만 읽음) 종목마다 3초에 한 번만 받는다. 받는 동안에는 직전 값을 바로 쓴다
+const TTL_MS = 3_000;
 // 데이마켓 가격은 화면 앞쪽(약 400KB)에 있어 그만큼만 읽는다
 const MAX_BYTES = 800_000;
 
