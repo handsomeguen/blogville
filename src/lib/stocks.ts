@@ -32,6 +32,18 @@ export function isUsDayMarketTime(now: Date = new Date()): boolean {
   return false;
 }
 
+/**
+ * 데이마켓이 열린 지 몇 분 지났나 (미국 동부 20:00 = 0분). 데이마켓 시간이 아니면 null.
+ * 장이 막 열리면 몇 분 동안은 체결이 없어 야후에도 값이 없다
+ */
+export function usDayMarketMinutes(now: Date = new Date()): number | null {
+  if (!isUsDayMarketTime(now)) return null;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? NaN);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? NaN);
+  return (hour >= 20 ? hour - 20 : hour + 4) * 60 + minute;
+}
+
 /** 네이버 로이터 코드(AAPL.O, BRK-B.N) → 한국투자증권 주간거래 시세 거래소·종목 (나스닥 BAQ, 뉴욕 BAY, 아멕스 BAA). 모르면 null */
 export function kisDaySymbol(code: string): { excd: "BAQ" | "BAY" | "BAA"; symb: string } | null {
   const m = /^([A-Z0-9.-]+?)\.([ONAK])$/.exec(code.toUpperCase());
