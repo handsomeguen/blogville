@@ -8,7 +8,7 @@ import { getTokenPrices } from "./kraken";
 import { getYahooOvernight } from "./yahoo";
 import { getQuoteOvernight } from "./yahoo-quote";
 import { getStreamOvernight } from "./yahoo-stream";
-import { isUsDayMarketTime, parseIndexChart, parseNaverQuote, parseNaverSearchItem, STOCK_ERRORS, STOCK_INDEXES, STOCK_MAX, type StockIndex, type StockIndexCode, type StockItem, type StockQuote } from "@/lib/stocks";
+import { isUsDayMarketTime, usDayMarketMinutes, parseIndexChart, parseNaverQuote, parseNaverSearchItem, STOCK_ERRORS, STOCK_INDEXES, STOCK_MAX, type StockIndex, type StockIndexCode, type StockItem, type StockQuote } from "@/lib/stocks";
 
 // 블로그 관심 종목 (📈 위젯). 시세는 네이버 증권이 화면에 쓰는 공개 주소에서 서버가 받아 잠깐 기억해 둔다.
 // 공식 API가 아니라 응답 모양이 바뀌거나 막히면 price가 null인 줄로 보여 준다(위젯이 "시세를 못 받았어요").
@@ -20,6 +20,8 @@ const SEARCH_BASE = () => process.env.STOCK_SEARCH_BASE ?? "https://ac.stock.nav
 const QUOTE_TTL_MS = 1_000;
 const SEARCH_TTL_MS = 60_000;
 const TIMEOUT_MS = 3_000;
+// 데이마켓이 열린 뒤 이 시간(분)이 지나도 야후 값이 없을 때만 크라켄 토큰 참고 가격을 쓴다
+const TOKEN_AFTER_MIN = 20;
 const HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; Blogville stock widget)",
   Referer: "https://m.stock.naver.com/",
@@ -127,7 +129,9 @@ export async function getQuotes(items: StockItem[]): Promise<StockQuote[]> {
   const yahoos = await Promise.all(
     items.map(async (item, i) => (!kis && dayWanted(i) ? (yahooApi.get(item.code) ?? streams[i] ?? (await getYahooOvernight(item.code))) : null)),
   );
-  const needToken = items.map((_, i) => dayWanted(i) && !kisDays[i] && !yahoos[i]);
+  // 크라켄 토큰은 야후가 계속 값을 못 줄 때만. 장이 열린 뒤 첫 20분은 야후 첫 체결을 기다리며 직전 마감 가격을 그대로 둔다
+  const tokenOk = (usDayMarketMinutes() ?? 0) >= TOKEN_AFTER_MIN;
+  const needToken = items.map((_, i) => tokenOk && dayWanted(i) && !kisDays[i] && !yahoos[i]);
   const tokens = needToken.some(Boolean) ? await getTokenPrices(items.filter((_, i) => needToken[i]).map((it) => it.code)) : new Map<string, number>();
   return items.map((item, i) => {
     const base = rows[i];

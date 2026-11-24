@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseYahooTick, yahooTicker, parseYahooOvernight, parseYahooQuoteOvernight, krakenPair, parseKrakenTicker, isUsDayMarketTime, kisDaySymbol, parseKisPrice, checkStock, formatChange, formatPrice, parseIndexChart, parseNaverQuote, parseNaverSearchItem, toNumber } from "@/lib/stocks";
+import { parseYahooTick, yahooTicker, parseYahooOvernight, parseYahooQuoteOvernight, krakenPair, parseKrakenTicker, isUsDayMarketTime, usDayMarketMinutes, kisDaySymbol, parseKisPrice, checkStock, formatChange, formatPrice, parseIndexChart, parseNaverQuote, parseNaverSearchItem, toNumber } from "@/lib/stocks";
 
 describe("관심 종목 규칙", () => {
   it("국내 6자리·미국 로이터 코드만 받는다", () => {
@@ -186,6 +186,16 @@ describe("야후 데이마켓(Overnight) 가격", () => {
     const down = html.replace("+23.38", "-1.50").replace("(+3.22%)", "(-0.21%)");
     expect(parseYahooOvernight(down)).toEqual({ price: 748.49, change: -1.5, rate: -0.21 });
     expect(parseYahooOvernight('<span data-testid="qsp-price">725.11 </span>')).toBeNull();
+  });
+});
+
+describe("데이마켓이 열린 지 몇 분", () => {
+  it("미국 동부 20:00(한국 10:00, 겨울)부터 센다", () => {
+    expect(usDayMarketMinutes(new Date("2026-11-24T01:00:00Z"))).toBe(0);
+    expect(usDayMarketMinutes(new Date("2026-11-24T01:05:30Z"))).toBe(5);
+    expect(usDayMarketMinutes(new Date("2026-11-24T05:30:00Z"))).toBe(270);
+    expect(usDayMarketMinutes(new Date("2026-11-24T08:59:00Z"))).toBe(479);
+    expect(usDayMarketMinutes(new Date("2026-11-24T09:30:00Z"))).toBeNull();
   });
 });
 
